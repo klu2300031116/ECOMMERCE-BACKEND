@@ -1,25 +1,17 @@
 # Stage 1: Build with Maven
 FROM maven:3.9.6-eclipse-temurin-21 AS build
-
-# Set working directory
 WORKDIR /app
-
-# Copy all project files
 COPY . .
-
-# Build the project (skip tests for faster CI builds)
 RUN mvn clean package -DskipTests
 
-# Stage 2: Run the JAR
-FROM eclipse-temurin:21-jdk
+# Stage 2: Deploy WAR on Tomcat
+FROM tomcat:9.0-jdk17-temurin
 
-WORKDIR /app
+# Remove default webapps
+RUN rm -rf /usr/local/tomcat/webapps/*
 
-# Copy the built JAR file from the previous stage
-COPY --from=build /app/target/*.jar app.jar
+# Copy generated WAR from build stage
+COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
-# Expose the application port
 EXPOSE 8080
-
-# Start the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["catalina.sh", "run"]
